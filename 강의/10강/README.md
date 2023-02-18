@@ -481,6 +481,177 @@ INFO 4689 --- [nio-8080-exec-2] h.s.controller.HelloController           : ipPor
 
 ## 뷰 템플릿에 Converter 적용하기
 
+타임리프는 렌더링 시에 컨버터를 적용해서 렌더링 하는 방법을 편리하게 지원한다.
+이전까지는 문자를 객체로 변환했다면, 이번에는 그 반대로 객체를 문자로 변환하는 작업을 확인할 수 있다.
+
+### 예제 1 - ${{...}}
+
+#### ConverterController
+
+```java
+@Controller
+@RequestMapping("/converter")
+public class ConverterController {
+
+    @GetMapping("/view")
+    public String converterView(
+            Model model
+    ) {
+        model.addAttribute("number", 1000);
+        model.addAttribute("ipPort", new IpPort("127.0.0.1", 8080));
+        return "converter/view";
+    }
+}
+```
+
+#### converter/view.html
+
+```html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<ul>
+    <li>${number}: <span th:text="${number}"></span></li>
+    <li>${{number}}: <span th:text="${{number}}"></span></li>
+    <li>${ipPort}: <span th:text="${ipPort}"></span></li>
+    <li>${{ipPort}}: <span th:text="${{ipPort}}"></span></li>
+</ul>
+</body>
+</html>
+```
+
+타임리프는 `${{...}}`를 사용하면 자동으로 컨버전 서비스를 사용해서 변환된 결과를 출력해준다.
+물론 **스프링과 통합** 되어서 스프링이 제공하는 컨버전 서비스를 사용하므로, 우리가 등록한 컨버터들을 사용할 수 있다.
+
+* 변수 표현식 : `${...}`
+* 컨버전 서비스 적용 : `${{...}}`
+
+#### 브라우저
+
+![img.png](img.png)
+
+#### Server Log
+
+```
+###############
+# th:text="${{number}}" 에서 호출
+###############
+INFO 4834 --- [nio-8080-exec-2] h.s.converter.IntegerToStringConverter   : Convert Integer To String source = 1000
+
+###############
+# th:text="${{ipPort}}" 에서 호출
+###############
+INFO 4834 --- [nio-8080-exec-2] h.s.converter.IpPortToStringConverter    : Convert IpPort To String source = IpPort(ip=127.0.0.1, port=8080)
+```
+
+### 정리
+
+* `${{number}}`
+    * 뷰 템플릿은 데이터를 문자로 출력한다. (`toString`)
+    * 따라서 컨버터를 적용하게 되면 Integer 타입인 10000을 String 타입으로 변환하는 컨버터인 `IntegerToStringConverter`를 실행하게 된다.
+    * 이 부분은 컨버터를 실행하지 않아도 타임리프가 숫자를 문자로 자동으로 변환히기 때문에 컨버터를 적용할 때와 하지 않을 때가 같다.
+* `${{ipPort}}`
+    * 뷰 템플릿은 데이터를 문자로 출력한다. (`toString`)
+    * 따라서 컨버터를 적용하게 되면 IpPort 타입을 String 타입으로 변환해야 하므로 `IpPortToStringConverter`가 적용된다.
+    * 그 결과 `127.0.0.1:8080`가 출력된다.
+
+### 예제 2 - 폼에 적용하기
+
+#### Form
+
+```java
+@Getter
+@RequiredArgsConstructor
+public class Form {
+    private final IpPort ipPort;
+}
+```
+
+#### ConverterController
+
+```java
+@Controller
+@RequestMapping("/converter")
+public class ConverterController {
+
+    @GetMapping("/edit")
+    public String converterForm(
+            Model model
+    ) {
+        IpPort ipPort = new IpPort("127.0.0.1", 8080);
+        Form form = new Form(ipPort);
+
+        model.addAttribute("form", form);
+        return "converter/form";
+    }
+
+    @PostMapping("/edit")
+    public String converterEdit(
+            @ModelAttribute Form form,
+            Model model
+    ) {
+        IpPort ipPort = form.getIpPort();
+        model.addAttribute("ipPort", ipPort);
+        return "converter/view";
+    }
+}
+```
+
+#### converter/form.html
+
+```html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form th:method="post" th:object="${form}">
+    th:field <input th:field="*{ipPort}" type="text"><br/>
+    th:value <input th:value="*{ipPort}" type="text">(보여주기 용도)<br/>
+    <input type="submit"/>
+</form>
+</body>
+</html>
+```
+
+#### 브라우저 호출 - GET /converter/edit
+
+![img_1.png](img_1.png)
+
+```
+###############
+# th:field="*{ipPort}" 에서 호출
+###############
+INFO 5095 --- [nio-8080-exec-3] h.s.converter.IpPortToStringConverter    : Convert IpPort To String source = IpPort(ip=127.0.0.1, port=8080)
+```
+
+#### Submit - POST /converter/edit
+
+![img_2.png](img_2.png)
+
+```
+###############
+# @ModelAttribute Form form 에서 호출
+###############
+INFO 5095 --- [nio-8080-exec-4] h.s.converter.StringToIpPortConverter    : Convert String To IpPort source = 127.0.0.1:8080
+
+###############
+# th:text="${{ipPort}}" 에서 호출
+###############
+INFO 5095 --- [nio-8080-exec-4] h.s.converter.IpPortToStringConverter    : Convert IpPort To String source = IpPort(ip=127.0.0.1, port=8080)
+```
+
+### 정리
+
+* `th:field`
+    * 타임리프의 `th:field`는 앞서 설명했듯이 `id`, `name`를 출력하는 등 다양한 기능이 있는데, 여기에 컨버전 서비스도 함께 적용된다.
+
 ## 포맷터 - Formatter
 
 ## 포맷터를 지원하는 컨버전 서비스
