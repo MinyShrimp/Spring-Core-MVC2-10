@@ -1073,7 +1073,7 @@ public class FormatterController {
 >
 > * https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#format-CustomFormatAnnotations
 
-## 주의 !!!
+## 주의 !!! - HttpMessageConverter, ConversionService
 
 > 메시지 컨버터(`HttpMessageConverter`)에는 컨버전 서비스가 적용되지 않는다.
 

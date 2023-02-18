@@ -22,3 +22,4 @@
 * 포맷터를 지원하는 컨버전 서비스
 * 포맷터 적용하기
 * 스프링이 제공하는 기본 포맷터
+* 주의! - HttpMessageConverter, ConversionService
