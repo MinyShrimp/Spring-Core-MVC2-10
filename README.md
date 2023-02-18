@@ -9,6 +9,7 @@
     * https://github.com/MinyShrimp/Spring-Core-MVC2-6
     * https://github.com/MinyShrimp/Spring-Core-MVC2-8
     * https://github.com/MinyShrimp/Spring-Core-MVC2-10
+    * https://github.com/MinyShrimp/Spring-Core-MVC2-11
 
 ## [스프링 타입 컨버터](./강의/10강)
 
