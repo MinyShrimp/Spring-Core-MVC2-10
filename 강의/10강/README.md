@@ -107,6 +107,8 @@ typeof data = Integer
 ### 컨버터 인터페이스
 
 ```java
+package org.springframework.core.convert.converter;
+
 @FunctionalInterface
 public interface Converter<S, T> {
 	@Nullable
@@ -128,13 +130,169 @@ public interface Converter<S, T> {
 > `PropertyEditor`는 동시성 문제가 있어서 타입을 변환할 때 마다 객체를 계속 생성해야 하는 단점이 있다.
 > 지금은 `Converter`의 등장으로 해당 문제들이 해결되었고, 기능 확장이 필요하면 `Converter`를 사용하면 된다
 
-## 타입 컨버터 - Convertor
+## 타입 컨버터 - Converter
+
+타입 컨버터를 사용하려면 `org.springframework.core.convert.converter.Converter` 인터페이스를 구현하면 된다.
+
+> **주의**<br>
+> `Converter`라는 이름의 인터페이스가 많으니 조심해야 한다.
+> `org.springframework.core.convert.converter.Converter`를 사용해야 한다.
+
+### 예제 1
+
+#### StringToIntegerConverter
+
+```java
+@Slf4j
+public class StringToIntegerConverter implements Converter<String, Integer> {
+    @Override
+    public Integer convert(String source) {
+        log.info("Convert String To Integer source = {}", source);
+        return Integer.valueOf(source);
+    }
+}
+```
+
+#### IntegerToStringConverter
+
+```java
+@Slf4j
+public class IntegerToStringConverter implements Converter<Integer, String> {
+    @Override
+    public String convert(Integer source) {
+        log.info("Convert Integer To String source = {}", source);
+        return String.valueOf(source);
+    }
+}
+```
+
+#### ConverterTest
+
+```java
+public class ConverterTest {
+    @Test
+    void stringToInteger() {
+        StringToIntegerConverter converter = new StringToIntegerConverter();
+        Integer result = converter.convert("10");
+        assertThat(result).isEqualTo(10);
+    }
+
+    @Test
+    void integerToString() {
+        IntegerToStringConverter converter = new IntegerToStringConverter();
+        String result = converter.convert(10);
+        assertThat(result).isEqualTo("10");
+    }
+}
+```
+
+#### 결과
+
+```
+Convert String To Integer source = 10
+Convert Integer To String source = 10
+```
+
+### 예제 2
+
+#### IpPort
+
+```java
+@Getter
+@EqualsAndHashCode
+@RequiredArgsConstructor
+public class IpPort {
+    private final String ip;
+    private final int port;
+}
+```
+
+#### StringToIpPortConverter
+
+```java
+@Slf4j
+public class StringToIpPortConverter implements Converter<String, IpPort> {
+    @Override
+    public IpPort convert(String source) {
+        log.info("Convert String To IpPort source = {}", source);
+
+        String[] split = source.split(":");
+        return new IpPort(
+                split[0],
+                Integer.parseInt(split[1])
+        );
+    }
+}
+```
+
+#### IpPortToStringConverter
+
+```java
+@Slf4j
+public class IpPortToStringConverter implements Converter<IpPort, String> {
+    @Override
+    public String convert(IpPort source) {
+        log.info("Convert IpPort To String source = {}", source);
+        return source.getIp() + ":" + source.getPort();
+    }
+}
+```
+
+#### ConverterTest
+
+```java
+public class ConverterTest {
+    @Test
+    void stringToIpPort() {
+        StringToIpPortConverter converter = new StringToIpPortConverter();
+        IpPort result = converter.convert("127.0.0.1:8080");
+        assertThat(result).isEqualTo(new IpPort("127.0.0.1", 8080));
+    }
+
+    @Test
+    void ipPortToString() {
+        IpPortToStringConverter converter = new IpPortToStringConverter();
+        String result = converter.convert(new IpPort("127.0.0.1", 8080));
+        assertThat(result).isEqualTo("127.0.0.1:8080");
+    }
+}
+```
+
+#### 결과
+
+```
+Convert String To IpPort source = 127.0.0.1:8080
+Convert IpPort To String source = hello.springcoremvc210.type.IpPort@59cb0946
+```
+
+### 정리
+
+타입 컨버터 인터페이스가 단순해서 이해하기 어렵지 않을 것이다.
+그런데 이렇게 타입 컨버터를 하나하나 직접 사용하면, 개발자가 직접 컨버팅 하는 것과 큰 차이가 없다.
+**타입 컨버터를 등록하고 관리하면서 편리하게 변환 기능을 제공하는 역할을 하는 무언가**가 필요하다.
+
+### 참고
+
+> 참고<br>
+> 스프링은 용도에 따라 다양한 방식의 타입 컨버터를 제공한다.
+>
+> * `Converter`: 기본 타입 컨버터
+> * `ConverterFactory`: 전체 클래스 계층 구조가 필요할 때
+> * `GenericConverter`: 정교한 구현, 대상 필드의 애노테이션 정보 사용 가능
+> * `ConditionalGenericConverter`: 특정 조건이 참인 경우에만 실행
+>
+> 자세한 내용은 공식 문서를 참고하자.
+> * https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#coreconvert
+
+> 참고<br>
+> 스프링은 문자, 숫자, 불린, Enum 등 일반적인 타입에 대한 대부분의 컨버터를 기본으로 제공한다.
+> IDE에서 `Converter`, `ConverterFactory`, `GenericConverter`의 구현체를 찾아보면 수 많은 컨버터를 확인할 수 있다.
 
 ## 컨버전 서비스 - ConversionService
 
-## 스프링에 Convertor 적용하기
+## 스프링에 Converter 적용하기
 
-## 뷰 템플릿에 Convertor 적용하기
+## 뷰 템플릿에 Converter 적용하기
 
 ## 포맷터 - Formatter
 
