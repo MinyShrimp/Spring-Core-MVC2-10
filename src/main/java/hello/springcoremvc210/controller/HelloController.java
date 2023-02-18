@@ -1,5 +1,6 @@
 package hello.springcoremvc210.controller;
 
+import hello.springcoremvc210.type.IpPort;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,5 +32,13 @@ public class HelloController {
         log.info("typeof data = {}", data.getClass().getSimpleName());
 
         return "hello " + data;
+    }
+
+    @GetMapping("/ip-port")
+    public String ipPort(
+            @RequestParam IpPort ipPort
+    ) {
+        log.info("ipPort = {}", ipPort);
+        return ipPort.toString();
     }
 }

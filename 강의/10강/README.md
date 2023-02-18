@@ -387,6 +387,98 @@ Integer value = conversionService.convert("10", Integer.class)
 
 ## 스프링에 Converter 적용하기
 
+### ConverterConfig - 등록하기
+
+```java
+@Configuration
+public class ConverterConfig implements WebMvcConfigurer {
+    @Override
+    public void addFormatters(
+            FormatterRegistry registry
+    ) {
+        registry.addConverter(new StringToIpPortConverter());
+        registry.addConverter(new IpPortToStringConverter());
+        registry.addConverter(new StringToIntegerConverter());
+        registry.addConverter(new IntegerToStringConverter());
+    }
+}
+```
+
+스프링은 내부에서 `ConversionService`를 제공한다.
+우리는 `WebMvcConfigurer`가 제공하는 `addFormatters()`를 사용해서 추가하고 싶은 컨버터를 등록하면 된다.
+이렇게 하면 스프링은 내부에서 사용하는 `ConversionService`에 컨버터를 추가해준다.
+
+### 예제 1 - 기존 코드
+
+#### HelloController
+
+```java
+@Slf4j
+@RestController
+public class HelloController {
+    @GetMapping("/hello/v2")
+    public String helloV2(
+            @RequestParam Integer data
+    ) {
+        log.info("data = {}", data);
+        log.info("typeof data = {}", data.getClass().getSimpleName());
+
+        return "hello " + data;
+    }
+}
+```
+
+#### 결과
+
+```
+INFO 4623 --- [nio-8080-exec-3] h.s.converter.StringToIntegerConverter   : Convert String To Integer source = 10
+INFO 4623 --- [nio-8080-exec-3] h.s.controller.HelloController           : data = 10
+INFO 4623 --- [nio-8080-exec-3] h.s.controller.HelloController           : typeof data = Integer
+```
+
+`?data=10`의 쿼리 파라미터는 문자이고 이것을 `Integer data`로 변환하는 과정이 필요하다.
+실행해보면 직접 등록한 `StringToIntegerConverter` 가 작동하는 로그를 확인할 수 있다.
+
+그런데 생각해보면 `StringToIntegerConverter`를 등록하기 전에도 이 코드는 잘 수행되었다.
+그것은 스프링이 내부에서 수 많은 기본 컨버터들을 제공하기 때문이다.
+
+**컨버터를 추가하면 추가한 컨버터가 기본 컨버터 보다 높은 우선순위를 가진다.**
+
+### 예제 2 - IpPort
+
+#### HelloController
+
+```java
+@Slf4j
+@RestController
+public class HelloController {
+    @GetMapping("/ip-port")
+    public String ipPort(
+            @RequestParam IpPort ipPort
+    ) {
+        log.info("ipPort = {}", ipPort);
+        return ipPort.toString();
+    }
+}
+```
+
+#### 결과
+
+```
+INFO 4689 --- [nio-8080-exec-2] h.s.converter.StringToIpPortConverter    : Convert String To IpPort source = 127.0.0.1:8080
+INFO 4689 --- [nio-8080-exec-2] h.s.controller.HelloController           : ipPort = IpPort(ip=127.0.0.1, port=8080)
+```
+
+`?ipPort=127.0.0.1:8080` 쿼리 스트링이 `@RequestParam IpPort ipPort`에서 객체 타입으로 잘 변환 된 것을 확인할 수 있다.
+
+### 처리과정 정리
+
+`@RequestParam`은 `@RequestParam`을 처리하는 `ArgumentResolver`인
+`RequestParamMethodArgumentResolver`에서 `ConversionService`를 사용해서 타입을 변환한다.
+
+부모 클래스와 다양한 외부 클래스를 호출하는 등 복잡한 내부 과정을 거치기 때문에 대략 이렇게 처리되는 것으로 이해해도 충분하다.
+만약 더 깊이있게 확인하고 싶으면 `IpPortConverter`에 디버그 브레이크 포인트를 걸어서 확인해보자.
+
 ## 뷰 템플릿에 Converter 적용하기
 
 ## 포맷터 - Formatter
