@@ -895,4 +895,65 @@ INFO hello.springcoremvc210.formatter.MyNumberFormatter - text = 1,000, locale =
 
 ## 포맷터 적용하기
 
+### ConverterConfig
+
+```java
+@Configuration
+public class ConverterConfig implements WebMvcConfigurer {
+    @Override
+    public void addFormatters(
+            FormatterRegistry registry
+    ) {
+        /**
+         * 주석 처리 이유
+         * - 우선순위가 Formatter 보다 Converter 가 높다
+         * - Converter > Formatter
+         */
+        // registry.addConverter(new StringToIpPortConverter());
+        // registry.addConverter(new IpPortToStringConverter());
+
+        // Converter 등록
+        registry.addConverter(new StringToIpPortConverter());
+        registry.addConverter(new IpPortToStringConverter());
+
+        // Formatter 등록
+        registry.addFormatter(new MyNumberFormatter());
+    }
+}
+```
+
+### 실행 1 - /converter/view
+
+#### 브라우저 결과
+
+* GET /converter/view
+
+![img_4.png](img_4.png)
+
+#### Server Log
+
+```
+# th:text="${{number}}"
+INFO 6147 --- [nio-8080-exec-1] h.s.formatter.MyNumberFormatter          : MyNumberFormatter.print call
+INFO 6147 --- [nio-8080-exec-1] h.s.formatter.MyNumberFormatter          : number = 1000, locale = ko
+
+# th:text="${{ipPort}}"
+INFO 6147 --- [nio-8080-exec-1] h.s.converter.IpPortToStringConverter    : Convert IpPort To String source = IpPort(ip=127.0.0.1, port=8080)
+```
+
+### 실행 2 - /hello/v2?data=10,000
+
+#### Postman
+
+![img_5.png](img_5.png)
+
+#### Server Log
+
+```
+INFO 6147 --- [nio-8080-exec-1] h.s.formatter.MyNumberFormatter          : MyNumberFormatter.parse call
+INFO 6147 --- [nio-8080-exec-1] h.s.formatter.MyNumberFormatter          : text = 10,000, locale = ko_KR
+INFO 6147 --- [nio-8080-exec-1] h.s.controller.HelloController           : data = 10000
+INFO 6147 --- [nio-8080-exec-1] h.s.controller.HelloController           : typeof data = Integer
+```
+
 ## 스프링이 제공하는 기본 포맷터
