@@ -654,6 +654,131 @@ INFO 5095 --- [nio-8080-exec-4] h.s.converter.IpPortToStringConverter    : Conve
 
 ## 포맷터 - Formatter
 
+### 소개
+
+`Converter`는 입력과 출력 타입에 제한이 없는, **범용 타입 변환 기능을 제공**한다.
+
+이번에는 일반적인 웹 애플리케이션 환경을 생각해보자.
+불린 타입을 숫자로 바꾸는 것 같은 범용 기능 보다는
+개발자 입장에서는 **문자를 다른 타입**으로 변환하거나, **다른 타입을 문자**로 변환하는 상황이 대부분이다.
+
+앞서 살펴본 예제들을 떠올려 보면 문자를 다른 객체로 변환하거나 객체를 문자로 변환하는 일이 대부분이다.
+
+아래 예시처럼 객체를 특정한 포멧에 맞추어 문자로 출력하거나 또는 그 반대의 역할을 하는 것에 **특화된 기능**이 바로 **포맷터(`Formatter`)**이다.
+포맷터는 컨버터의 특별한 버전으로 이해하면 된다.
+
+#### 예시
+
+* `Integer` -> `String`
+    * 1000 -> "1,000"
+    * "1,000" -> 1000
+* `Date` -> `String`
+    * "2021-01-01 10:50:11"
+    * `Locale` 정보가 필요할 수 도 있다.
+
+#### Converter vs Formatter
+
+* `Converter`
+    * 범용(객체 -> 객체)
+* `Formatter`
+    * 문자에 특화(객체 -> 문자, 문자 -> 객체) + 현지화(Locale)
+    * `Converter`의 특별한 버전
+
+### Formatter Interface
+
+```java
+package org.springframework.format;
+
+@FunctionalInterface
+public interface Printer<T> {
+	String print(T object, Locale locale);
+}
+
+@FunctionalInterface
+public interface Parser<T> {
+	T parse(String text, Locale locale) throws ParseException;
+}
+
+public interface Formatter<T> extends Printer<T>, Parser<T> { }
+```
+
+* `String print(T object, Locale locale)`
+    * 객체를 문자로 변경한다.
+* `T parse(String text, Locale locale)`
+    * 문자를 객체로 변경한다.
+
+### 예제
+
+#### MyNumberFormatter
+
+```java
+@Slf4j
+public class MyNumberFormatter implements Formatter<Number> {
+    @Override
+    public Number parse(
+            String text,
+            Locale locale
+    ) throws ParseException {
+        log.info("MyNumberFormatter.parse call");
+        log.info("text = {}, locale = {}", text, locale);
+
+        NumberFormat format = NumberFormat.getInstance(locale);
+        return format.parse(text);
+    }
+
+    @Override
+    public String print(
+            Number number,
+            Locale locale
+    ) {
+        log.info("MyNumberFormatter.print call");
+        log.info("number = {}, locale = {}", number, locale);
+
+        return NumberFormat.getInstance(locale).format(number);
+    }
+}
+```
+
+#### MyNumberFormatterTest
+
+```java
+public class MyNumberFormatterTest {
+    MyNumberFormatter formatter = new MyNumberFormatter();
+
+    @Test
+    void parse() throws ParseException {
+        Number result = formatter.parse("1,000", Locale.KOREA);
+        assertThat(result).isEqualTo(1000L);
+    }
+
+    @Test
+    void print() {
+        String result = formatter.print(1000, Locale.KOREA);
+        assertThat(result).isEqualTo("1,000");
+    }
+}
+```
+
+#### 결과
+
+```
+# parse
+INFO hello.springcoremvc210.formatter.MyNumberFormatter - MyNumberFormatter.parse call
+INFO hello.springcoremvc210.formatter.MyNumberFormatter - text = 1,000, locale = ko_KR
+
+# print
+INFO hello.springcoremvc210.formatter.MyNumberFormatter - MyNumberFormatter.print call
+INFO hello.springcoremvc210.formatter.MyNumberFormatter - number = 1000, locale = ko_KR
+```
+
+### 정리
+
+> **참고**<br>
+> 스프링은 용도에 따라 다양한 방식의 포맷터를 제공한다.
+> * `Formatter`: 포맷터
+> * `AnnotationFormatterFactory`: 필드의 타입이나 애노테이션 정보를 활용할 수 있는 포맷터
+> * 공식 문서: https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#format
+
 ## 포맷터를 지원하는 컨버전 서비스
 
 ## 포맷터 적용하기
